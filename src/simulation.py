@@ -2,6 +2,7 @@ from Hamil_search import *
 from scipy.sparse.linalg import expm
 import matplotlib.pyplot as plt
 from math import log2
+import sys
 
 def EncodeTar(Htar, blockNum, lamb):
     logDict = {}
@@ -49,9 +50,8 @@ def term2Mat(size, term):
 def blocks2Mat(size, block):
     return sum([term2Mat(size, b) for b in block])
 
-def getError(lambdaPen):
+def getError(lambdaPen, blockNum):
     n = 4
-    blockNum = 2
     size = n*blockNum
     Hpen_block = []
     Htar_block = []
@@ -92,8 +92,8 @@ def getError(lambdaPen):
     # print(checkSame(P@Henc@P - (P@Henc@Q@HpenInverse@Q@Henc@P / lambdaPen), U@Htar@U.conj().T))
     Hsim = lambdaPen * Hpen + Henc
     # np.random.seed(42)
-    epsilons = np.random.uniform(-1,1,size*2)
-    V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)]
+    epsilons = np.random.uniform(-1,1,size*3)
+    V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+size]) for i in range(size)]
     V = sum([p.value() for p in V])
     Hleft = expm(-1j * (Hsim + V))
     Hright = U @ expm(-1j * Htar) @ U.conj().T
@@ -103,14 +103,18 @@ def getError(lambdaPen):
 if __name__ == '__main__':
 
     x = []
+    blockNum = int(sys.argv[1])
+    iters = int(sys.argv[2])
     for i in range(2, 11):
         
         lamb = int(2**i)
         local = []
-        for j in range(20):
-            res = getError(2**i)
+        for j in range(iters):
+
+            res = getError(2**i, blockNum)
             local.append(res)
         avg = sum(local) / len(local)
         print(lamb, avg)
         x.append((lamb, local))
-    print(x)
+    with open(f'output{blockNum}.txt', 'w') as f:
+        f.write(str(x))
