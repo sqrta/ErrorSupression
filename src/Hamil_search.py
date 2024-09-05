@@ -40,13 +40,33 @@ def pauliStr2mat(num_qubits, pstrings):
         indexes.append(int(p[1:]))
     return eff*pauli2Mat(num_qubits, indexes, paulis)
 
+def parsePauliTerm(e):
+    pstr = e
+    eff = 1
+    pauli = set(['X', 'Y', 'Z'])
+    if e[0] not in pauli:
+        effStr = []
+        pStr = []
+        for i in e.split('*'):
+            if i[0] not in pauli:
+                effStr.append(i)
+            else:
+                pStr.append(i)
+        effstr = '*'.join(effStr)
+        pstr = '*'.join(pStr)
+            
+        eff = int(effstr)
+    return eff, pstr
 def pauliExpr2Mat(n, expr):
     """
     n: size
     pstring: e.g. X1*X2 + Z1*Z2
     """
     exp = expr.split('+')
-    terms = [PauliTerm(n, e) for e in exp] 
+    terms = [] 
+    for e in exp:
+        eff, pstr = parsePauliTerm(e)  
+        terms.append(PauliTerm(n, pstr, eff))
     H = sum([t.value() for t in terms])    
     return H
 
@@ -66,6 +86,7 @@ class PauliTerm:
         self.eff = eff
         self.term = term
         self.n = n
+        # print(eff, term)
     
     def value(self):
         return self.eff*pauliStr2mat(self.n, self.term)
@@ -78,6 +99,9 @@ class PauliTerm:
 
     
 def ket2Vec(n, kets):
+    '''
+    ket2Vec(n, ['1000', '-0111']
+    '''
     vec = np.zeros((2**n, 1))
     for ket in kets:
         sign = 1
