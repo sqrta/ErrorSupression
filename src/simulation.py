@@ -93,7 +93,7 @@ def getError(lambdaPen, blockNum):
     Hsim = lambdaPen * Hpen + Henc
     # np.random.seed(42)
     epsilons = np.random.uniform(-1,1,size*3)
-    V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+size]) for i in range(size)]
+    V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+2*size]) for i in range(size)]
     V = sum([p.value() for p in V])
     Hleft = expm(-1j * (Hsim + V))
     Hright = U @ expm(-1j * Htar) @ U.conj().T
@@ -105,13 +105,12 @@ if __name__ == '__main__':
     x = []
     blockNum = int(sys.argv[1])
     iters = int(sys.argv[2])
-    for i in range(2, 11):
-        
-        lamb = int(2**i)
+    for i in range(22):
+        expon = 4+i*0.2
+        lamb = int(2**expon)
         local = []
         for j in range(iters):
-
-            res = getError(2**i, blockNum)
+            res = getError(lamb, blockNum)
             local.append(res)
         avg = sum(local) / len(local)
         print(lamb, avg)
