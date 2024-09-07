@@ -105,8 +105,11 @@ if __name__ == '__main__':
     x = []
     blockNum = int(sys.argv[1])
     iters = int(sys.argv[2])
-    for i in range(22):
-        expon = 4+i*0.2
+    t = float(sys.argv[3])
+    lowBound = int(sys.argv[4])
+    upBound = int(sys.argv[5])
+    for i in range(lowBound, upBound+1):
+        expon = i
         lamb = int(2**expon)
         local = []
         for j in range(iters):
