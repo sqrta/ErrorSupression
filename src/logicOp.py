@@ -1,5 +1,7 @@
 from Hamil_search import *
 from itertools import product
+from simulation import *
+import time
 COMMUTE = 0
 MULTI = 1
 
@@ -125,17 +127,24 @@ def dagger(v):
     return np.conj(v).T 
 
 if __name__ =='__main__':
-    n = 8
-    Pstr1 = [['00', '11'], ['01', '-10']]
-    Pstr2 = [['00', '-11'], ['01', '10']]
-    Pstr3 = [['01', '10'], ['00', '-11']]
-    Pstr4 = [['01', '-10'], ['00', '11']]
-    Pstrs = [Pstr1, Pstr2, Pstr3, Pstr4]
-    Ps = [Pstr2P(n//4, p) for p in Pstrs]
-    P = np.zeros((2**n, 2**n))
-    for i in range(len(Ps)):
-        for j in range(len(Ps)):
-            P += np.kron(Ps[i], Ps[j])
+    
+    blocksize = 4
+    blockNum = 3
+    n = blocksize * blockNum
+    start = time.time()
+    # Pstr1 = [['00', '11'], ['01', '-10']]
+    # Pstr2 = [['00', '-11'], ['01', '10']]
+    # Pstr3 = [['01', '10'], ['00', '-11']]
+    # Pstr4 = [['01', '-10'], ['00', '11']]
+    # Pstrs = [Pstr1, Pstr2, Pstr3, Pstr4]
+    # Ps = sum([Pstr2P(2, p) for p in Pstrs])
+    # P = Ps
+    # for i in range(1, blockNum):
+    #     P = np.kron(P, Ps)
+    U = getU(blocksize, blockNum)
+    P = U @ U.conj().T
+    end = time.time()
+    print(f"get P use {end-start}s")
     # P = P / 2**4
     Q = np.identity(2**n) - P
     print(MEqual(P@P, P))
@@ -143,10 +152,28 @@ if __name__ =='__main__':
     Xeff = (1,0) * (n//2)
     Zeff = (g,0) * (n//2)
     Hpen = getHamil(n, Xeff, Zeff)
+    end = time.time()
+    print(f'get Hpen use {end-start}s')
     HpenInverse = np.linalg.pinv(Hpen)
+    end = time.time()
+    print(f'get HpenInverse use {end-start}s')
     T = Hpen @ HpenInverse @ Hpen
-    print(MEqual(T, Hpen))
-
+    # print(MEqual(T, Hpen))
+    lambdaPen = 16
+    Q0 = HpenInverse @ Hpen
+    P0 = np.identity(Q0.shape[0]) - Q0
+    def crossTerm(i):
+        return [(1, f'Z{4*i+1}*X{4*i+7}+Z{4*i+3}*X{4*i+7}')]
+    Henc_block = getHencBlock(blockNum, lambdaPen=16, crossTerm=crossTerm)
+    Htar_block = getHtarBlock(n, blockNum)
+    Henc = blocks2Mat(n, Henc_block)
+    end = time.time()
+    print(f'get Henc use {end-start}s')
+    Htar = blocks2Mat(n//2, Htar_block)
+    end =time.time()
+    print(f"get Htar use {end-start}s")
+    Heff_2nd_order = P0@Henc@P0 - (P0@Henc@Q0@HpenInverse@Q0@Henc@P0 / lambdaPen)
+    print(checkSame(P @ Heff_2nd_order @ P, U@Htar@U.conj().T))
     def A2LA(A):
         return P @ A @ Q @ HpenInverse @ Q @ A @ P
     A = pauliExpr2Mat(n, 'X1*Z4+X2*Z4')
