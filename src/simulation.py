@@ -115,7 +115,7 @@ def getError(lambdaPen, blockNum, iters=1):
     Hsim = lambdaPen * Hpen + Henc
     # np.random.seed(42)
     values = []
-    for i in iters:
+    for i in range(iters):
         epsilons = np.random.uniform(-1,1,size*3)
         V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+2*size]) for i in range(size)]
         V = sum([p.value() for p in V])
