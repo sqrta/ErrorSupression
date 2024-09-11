@@ -44,13 +44,35 @@ def blockize(block, blockNum, key=4):
             blocks.append((b[0], pstr))
     return blocks
 
+def exp_minus_iHt(H, t):
+    """
+    e^{-iHt}
+    """
+    e, u = np.linalg.eigh(H)
+    e = np.expand_dims(e, axis=1)
+    A = u.conj().T
+    A = np.exp(-1j*e*t) * A
+    A = u @ A
+    return A
+
+def exp_minus_iHt_mult_B(H, t, B):
+    """
+    e^{-iHt} B
+    """
+    e, u = np.linalg.eigh(H)
+    e = np.expand_dims(e, axis=1)
+    A = u.conj().T @ B
+    A = np.exp(-1j*e*t) * A
+    A = u @ A
+    return A
+
 def term2Mat(size, term):
     return term[0] * pauliExpr2Mat(size, term[1])
     
 def blocks2Mat(size, block):
     return sum([term2Mat(size, b) for b in block])
 
-def getError(lambdaPen, blockNum):
+def getError(lambdaPen, blockNum, iters=1):
     n = 4
     size = n*blockNum
     Hpen_block = []
@@ -92,13 +114,16 @@ def getError(lambdaPen, blockNum):
     # print(checkSame(P@Henc@P - (P@Henc@Q@HpenInverse@Q@Henc@P / lambdaPen), U@Htar@U.conj().T))
     Hsim = lambdaPen * Hpen + Henc
     # np.random.seed(42)
-    epsilons = np.random.uniform(-1,1,size*3)
-    V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+2*size]) for i in range(size)]
-    V = sum([p.value() for p in V])
-    Hleft = expm(-1j * (Hsim + V))
-    Hright = U @ expm(-1j * Htar) @ U.conj().T
-    value = np.linalg.norm((Hleft - Hright)@P, ord = 2)
-    return value
+    values = []
+    for i in iters:
+        epsilons = np.random.uniform(-1,1,size*3)
+        V = [PauliTerm(size, f'X{i}', epsilons[i]) for i in range(size)] + [PauliTerm(size, f'Z{i}', epsilons[i+size]) for i in range(size)] + [PauliTerm(size, f'Y{i}', epsilons[i+2*size]) for i in range(size)]
+        V = sum([p.value() for p in V])
+        Hleft = exp_minus_iHt_mult_B(Hsim + V, t, U)
+        Hright = U @ exp_minus_iHt(Htar, t)
+        err = np.linalg.norm(Hleft - Hright, ord = 2)
+        values.append(err)
+    return values
 
 if __name__ == '__main__':
 
@@ -111,10 +136,7 @@ if __name__ == '__main__':
     for i in range(lowBound, upBound+1):
         expon = i
         lamb = int(2**expon)
-        local = []
-        for j in range(iters):
-            res = getError(lamb, blockNum)
-            local.append(res)
+        local = getError(lamb, blockNum, iters)
         avg = sum(local) / len(local)
         print(lamb, avg)
         x.append((lamb, local))
