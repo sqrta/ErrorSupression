@@ -65,17 +65,30 @@ def simplify(states):
             effMap[k] += state.eff()
         else:
             effMap[k] = state.eff()
-    
+    result = []
+    for k in effMap.keys():
+        if abs(effMap[k])>1e-4:
+            result.append(leakState(k, 1, 1/effMap[k]))
+    return result
 
 def Join(string, array):
     return string.join([str(i) for i in array])
     
 if __name__ == '__main__':
-    init = [4, -4, -4, 4, 4, -4]
+    init = [-4, 4, -4, 4, 4, -4]
     initState = [leakState(init, 1, 1)]
-    opLeft = [[('Z', 1), ('X', 7)], [('Z', 3), ('X', 7)]]
-    opRight = [[('Z', 5), ('X', 11)], [('Z', 7), ('X', 11)]]
+    # opLeft = [[('Z', 1), ('X', 7)], [('Z', 3), ('X', 7)]]
+    # opRight = [[('Z', 5), ('X', 11)], [('Z', 7), ('X', 11)]]
+    opLeft = [[('Z', 1), ('X', 7)]]
+    opRight = [[('Z', 7), ('X', 11)]]
+    # opLeft = [[('Z', 1), ('X', 6)], [('Z', 3), ('X', 6)]]
+    # opRight = [[('Z', 5), ('X', 10)], [('Z', 7), ('X', 10)]]
     res = multiply(initState, opLeft, setFrac=True)
-
     res = multiply(res, opRight)
+    print(Join(' + ', res))
+    res2 = multiply(initState, opRight, setFrac=True)
+    res2 = multiply(res2, opLeft)
+    print(Join(' + ', res2))
+    
+    res = simplify(res+res2)
     print(Join(' + ', res))
