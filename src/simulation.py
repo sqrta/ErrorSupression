@@ -31,6 +31,25 @@ def getU(n, blockNum):
         U = np.kron(U, U0)
     return U
 
+def getHencBlock(blockNum, lambdaPen):
+    Htar_block = getHtarBlock(blockNum)
+    Henc_block = EncodeTar(Htar_block, blockNum, lambdaPen)
+    return Henc_block
+
+def getHtarBlock(blockNum):
+    Htar_block = []
+    for i in range(blockNum):
+        Htar_block.append((1, f'Z{2*i}*Z{2*i+1}'))
+        Htar_block.append((1, f'Z{2*i}'))
+        Htar_block.append((1, f'Z{2*i+1}'))
+        Htar_block.append((1, f'X{2*i}'))
+        Htar_block.append((1, f'X{2*i+1}'))
+    for i in range(blockNum-1):
+        # B1.append((1, f'Z{2*i+1}*Z{2*i+2}'))
+        # B2.append((1, f'Z{2*i+2}'))
+        Htar_block.append((1, f'Z{2*i+1}*Z{2*i+2}'))
+    return Htar_block
+
 def blockize(block, blockNum, key=4):
     blocks = []
     for i in range(blockNum):

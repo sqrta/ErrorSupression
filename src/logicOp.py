@@ -129,14 +129,14 @@ def dagger(v):
 if __name__ =='__main__':
     
     blocksize = 4
-    blockNum = 3
+    blockNum = 2
     n = blocksize * blockNum
     start = time.time()
-    # Pstr1 = [['00', '11'], ['01', '-10']]
-    # Pstr2 = [['00', '-11'], ['01', '10']]
-    # Pstr3 = [['01', '10'], ['00', '-11']]
-    # Pstr4 = [['01', '-10'], ['00', '11']]
-    # Pstrs = [Pstr1, Pstr2, Pstr3, Pstr4]
+    Pstr1 = [['00', '11'], ['01', '-10']]
+    Pstr2 = [['00', '-11'], ['01', '10']]
+    Pstr3 = [['01', '10'], ['00', '-11']]
+    Pstr4 = [['01', '-10'], ['00', '11']]
+    Pstrs = [Pstr1, Pstr2, Pstr3, Pstr4]
     # Ps = sum([Pstr2P(2, p) for p in Pstrs])
     # P = Ps
     # for i in range(1, blockNum):
@@ -162,10 +162,8 @@ if __name__ =='__main__':
     lambdaPen = 16
     Q0 = HpenInverse @ Hpen
     P0 = np.identity(Q0.shape[0]) - Q0
-    def crossTerm(i):
-        return [(1, f'Z{4*i+1}*X{4*i+7}+Z{4*i+3}*X{4*i+7}')]
-    Henc_block = getHencBlock(blockNum, lambdaPen=16, crossTerm=crossTerm)
-    Htar_block = getHtarBlock(n, blockNum)
+    Henc_block = getHencBlock(blockNum, lambdaPen=16)
+    Htar_block = getHtarBlock(blockNum)
     Henc = blocks2Mat(n, Henc_block)
     end = time.time()
     print(f'get Henc use {end-start}s')
