@@ -1,0 +1,47 @@
+Create and launch aws ec2 (platform: Amazon Linux)
+
+$ sudo yum update
+$ python3 --version
+$ sudo yum install git
+$ git clone https://github.com/GregDMeyer/dynamite.git
+
+To install make, gcc, etc.:
+$ sudo yum groupinstall "Development Tools"
+
+############# Build PETSc #############
+
+$ vim dynamite/petsc_config/complex-opt.py
+Uncomment '--download-scalapack', '--download-mumps', and '--download-mpich'.
+Add '--download-fblaslapack=1'.
+Press `i` to enter edit mode, press `esc` to exit edit mode, press `:wq` to save and quit vim.
+
+$ git clone --depth 1 --branch v3.20.5 https://gitlab.com/petsc/petsc.git petsc
+$ cd petsc/
+$ python3 ../dynamite/petsc_config/complex-opt.py
+
+If it configures correctly, it will tell you to run a make command. Copy the command and run it.
+
+$ export PETSC_DIR=/home/ec2-user/petsc; export PETSC_ARCH=complex-opt
+
+############# Build SLEPc #############
+
+$ cd ~
+$ git clone --depth 1 --branch v3.20.2 https://gitlab.com/slepc/slepc.git slepc
+$ cd slepc
+$ ./configure
+
+If it configures correctly, it will tell you to run a make command. Copy the command and run it.
+
+$ export SLEPC_DIR=/home/ec2-user/slepc
+
+############# Build dynamite #############
+
+$ cd ~
+$ sudo yum install python3-pip
+$ pip --version
+Dynamite will only build successfully with pip < 23.1. If not, we recommend running pip install pip~=23.0.1.
+
+$ sudo yum install python-devel
+
+$ cd dynamite
+$ pip install ./
