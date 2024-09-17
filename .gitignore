@@ -1,2 +1,4 @@
 src/output*
 src/__pycache__
+*.pdf
+.DS_Store
