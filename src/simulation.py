@@ -32,23 +32,9 @@ def getU(n, blockNum):
     return U
 
 def getHencBlock(blockNum, lambdaPen):
-    Htar_block = getHtarBlock(blockNum)
+    Htar_block = getIsingHtarBlock(blockNum)
     Henc_block = EncodeTar(Htar_block, blockNum, lambdaPen)
     return Henc_block
-
-def getHtarBlock(blockNum):
-    Htar_block = []
-    for i in range(blockNum):
-        Htar_block.append((1, f'Z{2*i}*Z{2*i+1}'))
-        Htar_block.append((1, f'Z{2*i}'))
-        Htar_block.append((1, f'Z{2*i+1}'))
-        Htar_block.append((1, f'X{2*i}'))
-        Htar_block.append((1, f'X{2*i+1}'))
-    for i in range(blockNum-1):
-        # B1.append((1, f'Z{2*i+1}*Z{2*i+2}'))
-        # B2.append((1, f'Z{2*i+2}'))
-        Htar_block.append((1, f'Z{2*i+1}*Z{2*i+2}'))
-    return Htar_block
 
 def blockize(block, blockNum, key=4):
     blocks = []
@@ -91,6 +77,12 @@ def term2Mat(size, term):
 def blocks2Mat(size, block):
     return sum([term2Mat(size, b) for b in block])
 
+def getHpen(size, blockNum):
+    Hpen_block = []
+    for i in range(blockNum):
+        Hpen_block += [(1, f'X{4*i}*X{4*i+1}'), (3, f'Z{4*i}*Z{4*i+1}'), (1, f'X{4*i+2}*X{4*i+3}'), (3, f'Z{4*i+2}*Z{4*i+3}')]
+    Hpen = blocks2Mat(size, Hpen_block)
+    return Hpen
 def getError(lambdaPen, blockNum, iters=1):
     n = 4
     size = n*blockNum
