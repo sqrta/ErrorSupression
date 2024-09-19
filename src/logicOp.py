@@ -218,7 +218,7 @@ def logHadmard(logStr):
             result+=logStr[i]
     return result
 
-def checkAstring(Astring, lamb, blockNum):
+def checkAstring(Astring, lamb, blocksize, blockNum):
     result = getLogicOp(getIsingHtarBlock, blocksize, blockNum, Astring)
     effs = [(logHadmard(a[0]), a[1]) for a in result]
     result = checkOps(effs, Astring, lamb, blockNum)
@@ -229,7 +229,7 @@ if __name__ =='__main__':
     lamb = 512
     blockNum = 2
     blocksize = 4
-    result = checkAstring(Astring, lamb, blockNum)
+    result = checkAstring(Astring, lamb, blocksize, blockNum)
     print(result)
     # p = searchOp(getIsingHtarBlock, 'IXZI', 4, 2)
     # print(p)
