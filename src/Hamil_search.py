@@ -69,7 +69,7 @@ def parsePauliTerm(e):
         effstr = '*'.join(effStr)
         pstr = '*'.join(pStr)
             
-        eff = float(effstr)
+        eff = eval(effstr)
     return eff, pstr
 def pauliExpr2Mat(n, expr):
     """
