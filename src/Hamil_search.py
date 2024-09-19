@@ -47,7 +47,7 @@ def pauliStr2mat(num_qubits, pstrings):
     pauli = pstrings.split('*')
     eff = 1
     if pauli[0].isdigit():
-        eff = int(pauli[0])
+        eff = eval(pauli[0])
         pauli.pop(0)
     for p in pauli:
         paulis.append(pmap[p[0].upper()])
