@@ -26,88 +26,10 @@ class Cons:
 
     def __repr__(self):
         return str(self)
-
-def searchLogical(n,k,H):
-    P = getProjector(n,H)
-    phyCanStr = phyOpCandiate(n)
-    phyCan = [pauliExpr2Mat(n, i) for i in phyCanStr]
-    '''
-    ConstraintSet, the first op is free so is []
-    rules for each op is a list of CONS)
-    '''
-    '''
-        order 
     
-    '''
-    ConstraintSet = []
-    index = [(i,j) for i in range(k-1) for j in range(i+1, k)]
-    PauliSet = [f'X{i}' for i in range(k)] + [f'Z{i}' for i in range(k)]
-    PauliSet += [f'X{a[0]}X{a[1]}' for a in index] + [f'Z{a[0]}Z{a[1]}' for a in index]
-    # add X0~X_{k-1}
-    for i in range(k):
-        rule = []
-        for j in range(i):
-            rule.append(Cons([j], COMMUTE, 1))
-        ConstraintSet.append(rule)
-    # Z0~Z_{n-1}
-    for i in range(k):
-        rule = []
-        for j in range(k):
-            if i!=j:
-                rule.append(Cons([j], COMMUTE, 1))
-            else:
-                rule.append(Cons([j], COMMUTE, -1))
-        for j in range(i):
-            rule.append(Cons([k+j], COMMUTE, 1))   
-        ConstraintSet.append(rule)  
-    # add X0X1 ...
-    for ind in index:
-        a,b = ind        
-        rule=[Cons([a,b], MULTI, 1)]
-        ConstraintSet.append(rule)
-
-    # add Z0Z1 ...
-    for ind in index:
-        a,b = ind        
-        rule=[Cons([a+k,b+k], MULTI, 1)]
-        ConstraintSet.append(rule)
-
-    for i in range(len(ConstraintSet)):
-        cs = ConstraintSet[i]
-        tmp = [Cons2Str(c, PauliSet) for c in cs]
-        print(f'{PauliSet[i]}: {", ".join(tmp)}')
-
-    indexStack = [0]
-    print(f"conSetLen: {len(ConstraintSet)}, candiateLen: {len(phyCan)}")
-
-    while len(indexStack)>0:
-        print(indexStack)
-        if len(indexStack)>=len(ConstraintSet):
-            break
-        curLog = len(indexStack)-1
-        curPhyInd = indexStack[curLog]
-        if curPhyInd >= len(phyCan):
-            indexStack.pop(-1)
-            indexStack[-1] += 1
-            continue
-        phyOp = phyCan[curPhyInd]
-        flag = True
-        for cons in ConstraintSet[curLog]:
-            relatedOp = [phyCan[i] for i in cons.consIndex]
-            if not testConstraint(P, phyOp, cons, relatedOp):
-                flag = False
-                break
-        if flag:
-            if len(indexStack) == len(ConstraintSet):
-                break
-            else:
-                indexStack.append(0)
-        else:
-            indexStack[-1] += 1
-
-    return PauliSet, [phyCanStr[i] for i in indexStack]
-
-
+def debugMsg(debug, *msg):
+    if debug:
+        debugMsg(debug, *msg)
 
 def testConstraint(P, phyOp, cons, relatedOp):
     type = cons.type
@@ -126,10 +48,7 @@ def Pstr2P(n, Pstr):
 def dagger(v):
     return np.conj(v).T 
 
-if __name__ =='__main__':
-    
-    blocksize = 4
-    blockNum = 2
+def getLogicOp(getHtarBlock, blocksize, blockNum, Astring, debug=False):
     n = blocksize * blockNum
     start = time.time()
     Pstr1 = [['00', '11'], ['01', '-10']]
@@ -144,39 +63,40 @@ if __name__ =='__main__':
     U = getU(blocksize, blockNum)
     P = U @ U.conj().T
     end = time.time()
-    print(f"get P use {end-start}s")
+    debugMsg(debug, f"get P use {end-start}s")
     # P = P / 2**4
     Q = np.identity(2**n) - P
-    print(MEqual(P@P, P))
+    debugMsg(debug, MEqual(P@P, P))
     g = 3
     Xeff = (1,0) * (n//2)
     Zeff = (g,0) * (n//2)
     Hpen = getHamil(n, Xeff, Zeff)
     end = time.time()
-    print(f'get Hpen use {end-start}s')
+    debugMsg(debug, f'get Hpen use {end-start}s')
     HpenInverse = np.linalg.pinv(Hpen)
     end = time.time()
-    print(f'get HpenInverse use {end-start}s')
+    debugMsg(debug, f'get HpenInverse use {end-start}s')
     T = Hpen @ HpenInverse @ Hpen
-    # print(MEqual(T, Hpen))
+    # debugMsg(debug, MEqual(T, Hpen))
     lambdaPen = 16
     Q0 = HpenInverse @ Hpen
     P0 = np.identity(Q0.shape[0]) - Q0
     Henc_block = getHencBlock(blockNum, lambdaPen=16)
-    Htar_block = getHtarBlock(blockNum)
+    # Htar_block = getHtarBlock(blockNum)
     Henc = blocks2Mat(n, Henc_block)
     end = time.time()
-    print(f'get Henc use {end-start}s')
-    Htar = blocks2Mat(n//2, Htar_block)
+    debugMsg(debug, f'get Henc use {end-start}s')
+    # Htar = blocks2Mat(n//2, Htar_block)
     end =time.time()
-    print(f"get Htar use {end-start}s")
+    debugMsg(debug, f"get Htar use {end-start}s")
     Heff_2nd_order = P0@Henc@P0 - (P0@Henc@Q0@HpenInverse@Q0@Henc@P0 / lambdaPen)
-    print(checkSame(P @ Heff_2nd_order @ P, U@Htar@U.conj().T))
+    # debugMsg(debug, checkSame(P @ Heff_2nd_order @ P, U@Htar@U.conj().T))
     def A2LA(A):
         return P @ A @ Q @ HpenInverse @ Q @ A @ P
-    A = pauliExpr2Mat(n, 'X1*Z4+X2*Z4')
+    # A = pauliExpr2Mat(n, 'X1*Z4+X2*Z4')
+    A = pauliExpr2Mat(n, Astring)
     la = A2LA(A)
-    print(LA.norm(la))
+    debugMsg(debug, LA.norm(la))
     def getEff(n, pauliList):   
         pmap = {'I': I, 'X':X, 'Y':Y, 'Z':Z}
         Ms = [pmap[k]/2 for k in pauliList]
@@ -199,13 +119,12 @@ if __name__ =='__main__':
                 eff = Ms[0][m1_, m1] * Ms[1][m0_, m0] * Ms[2][j1_, j1] * Ms[3][j0_, j0]
                 prod = vkron(m,j) @ la @ dagger(vkron(m_, j_))
                 # if eff!=0:
-                #     print(mj, mj_, eff, prod)
-                #     print(m1, m0, j1, j0, m1_, m0_, j1_, j0_)
+                #     debugMsg(debug, mj, mj_, eff, prod)
+                #     debugMsg(debug, m1, m0, j1, j0, m1_, m0_, j1_, j0_)
                 res += eff * prod
         return res
     plist = ('I', 'X', 'Y', 'Z')
-    res = getEff(n, 'IIZI')
-    print(res)
+    resultOp = []
     # exit(0)
     for i in plist:
         for j in plist:
@@ -214,11 +133,103 @@ if __name__ =='__main__':
                     s = i+j+k+l
                     result = getEff(n, s)
                     if abs(result) > 1e-4:
-                        print(s, result)
+                        resultOp.append((s,result[0][0].real))
+                        debugMsg(debug, s, result)
+    return resultOp
     # n = 6
     # k = 3
     # Xeff, Zeff = (0, -1, -2, -1, 0, 1), (2, 0, -2, 0, 2, 1)
     # H = getHamil(n,Xeff,Zeff)
     # list, res = searchLogical(n, k, H)
-    # print(list)
-    # print(res)
+    # debugMsg(debug, list)
+    # debugMsg(debug, res)
+
+def searchOp(getHtarBlock, targetOp, blocksize, blockNum):
+    pauliPairs = [f'X{i}*Z{j}' for i in range(3) for j in range(4,8)] + [f'Z{i}*X{j}' for i in range(3) for j in range(4,8)]
+    candidates = ['Z1*X6+Z3*X6+Z1*X4']
+    goodPauli = None
+    for c in candidates:
+        result = getLogicOp(getHtarBlock, blocksize, blockNum, c)
+        exits = False
+        valid = True
+        for item in result:
+            string = item[0]
+            if string == targetOp:
+                exits = True
+            if string.count('I')<2:
+                valid=False
+                break
+        if valid and exits:
+            goodPauli = (c, result)
+            break
+    return goodPauli
+
+def palinPauliStr2IndexPauliStr(pstr):
+    result = []
+    for i in range(len(pstr)):
+        if pstr[i]=='I':
+            continue
+        result.append(f'{pstr[i]}{i}')
+    return '*'.join(result)
+
+def checkOps(Ops, Astring, lamb, blockNum):
+    logDict = {}
+    for i in range(blockNum):
+        logDict[f'X{2*i}'] = [(-1, f'X{4*i}*X{4*i+2}')]
+        logDict[f'X{2*i+1}'] = [(1, f'X{4*i}*X{4*i+1}')]
+        logDict[f'Z{2*i}'] = [(1, f'Z{4*i}*Z{4*i+1}')]
+        logDict[f'Z{2*i+1}'] = [(1, f'Z{4*i}*Z{4*i+2}')]
+        logDict[f'Z{2*i}*Z{2*i+1}'] = [(1, f'Z{4*i+1}*Z{4*i+2}')]
+    HtarBlock = []
+    HencBlock = []
+    for op in Ops:
+        if op[0].count('I')<2:
+            print("there are three-local terms")
+            print(Ops)
+            exit(0)
+        pstr = palinPauliStr2IndexPauliStr(op[0])
+        if op[0].count('I')==2:
+            HtarBlock.append((-op[1], pstr))
+        if op[0].count('I') == 3:
+            HencBlock.append((op[1], logDict[pstr][0][1]))
+    # print(HtarBlock)
+    # print(HencBlock)
+    Htar = blocks2Mat(4, HtarBlock)
+    n = 8
+    Henc = lamb**0.5*pauliExpr2Mat(n, Astring) + blocks2Mat(8, HencBlock)
+    Hpen = getHpen(n, 2)
+    U = getU(n//2, blockNum)
+    P = U @ U.conj().T
+    HpenInverse = np.linalg.pinv(Hpen)
+    Q0 = HpenInverse @ Hpen
+    P0 = np.identity(Q0.shape[0]) - Q0
+    Heff_2nd_order = P0@Henc@P0 - (P0@Henc@Q0@HpenInverse@Q0@Henc@P0 / lamb)
+    flag1 = checkSame(P @ Heff_2nd_order @ P, U@Htar@U.conj().T)
+    flag2 = checkSame(P @ Heff_2nd_order @ (P0-P), np.zeros(P.shape))
+    return flag1, flag2
+
+def logHadmard(logStr):
+    result = ''
+    Hmap = {'X':'Z', 'Z':'X', 'I':'I'}
+    for i in range(len(logStr)):
+        if i%2==1:
+            result+=Hmap[logStr[i]]
+        else:
+            result+=logStr[i]
+    return result
+
+def checkAstring(Astring, lamb, blockNum):
+    result = getLogicOp(getIsingHtarBlock, blocksize, blockNum, Astring)
+    effs = [(logHadmard(a[0]), a[1]) for a in result]
+    result = checkOps(effs, Astring, lamb, blockNum)
+    return result
+
+if __name__ =='__main__':
+    Astring = 'Z1*X6+Z3*X6'
+    lamb = 512
+    blockNum = 2
+    blocksize = 4
+    result = checkAstring(Astring, lamb, blockNum)
+    print(result)
+    # p = searchOp(getIsingHtarBlock, 'IXZI', 4, 2)
+    # print(p)

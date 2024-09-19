@@ -26,6 +26,20 @@ def pauli2Mat(num_qubits, indexes, paulis):
         op_list[index] = pauli
     return tensor(op_list)
 
+def getIsingHtarBlock(blockNum):
+    Htar_block = []
+    for i in range(blockNum):
+        Htar_block.append((1, f'Z{2*i}*Z{2*i+1}'))
+        Htar_block.append((1, f'Z{2*i}'))
+        Htar_block.append((1, f'Z{2*i+1}'))
+        Htar_block.append((1, f'X{2*i}'))
+        Htar_block.append((1, f'X{2*i+1}'))
+    for i in range(blockNum-1):
+        # B1.append((1, f'Z{2*i+1}*Z{2*i+2}'))
+        # B2.append((1, f'Z{2*i+2}'))
+        Htar_block.append((1, f'Z{2*i+1}*Z{2*i+2}'))
+    return Htar_block
+
 def pauliStr2mat(num_qubits, pstrings):
     indexes = []
     paulis = []
@@ -55,7 +69,7 @@ def parsePauliTerm(e):
         effstr = '*'.join(effStr)
         pstr = '*'.join(pStr)
             
-        eff = int(effstr)
+        eff = float(effstr)
     return eff, pstr
 def pauliExpr2Mat(n, expr):
     """
