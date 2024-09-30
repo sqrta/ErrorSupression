@@ -7,6 +7,9 @@ import argparse
 X, Y, Z = sigmax, sigmay, sigmaz
 MAX_ITS = 100000
 
+flavor_gx = [1, 2, 3]
+flavor_gz = [4, 5, 6]
+
 def array2state(L, arr):
     """
     Convert a numpy array to an L-qubit state.
@@ -35,8 +38,10 @@ def get_encoder_isometry(nb):
 if __name__ == '__main__':
     # ----- parse command line input -----
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("--nb", type=int, required=True,
-                           help="number of blocks")
+    argparser.add_argument("--nr", type=int, required=True,
+                           help="number of rows of blocks")
+    argparser.add_argument("--nc", type=int, required=True,
+                           help="number of columns of blocks")
     argparser.add_argument("--noise", type=float, required=True,
                            help="noise strength")
     argparser.add_argument("--lamb", type=int, required=True,
@@ -49,7 +54,8 @@ if __name__ == '__main__':
                            help="random seed (used to sample the noise coefficients and the initial state)")
     args = argparser.parse_args()
 
-    nb = args.nb
+    n_row = args.nr
+    n_col = args.nc
     noise = args.noise
 
     if args.lamb >= 0:
@@ -70,25 +76,98 @@ if __name__ == '__main__':
         print("invalid seed")
         exit(1)
 
+    def lidx(c, r, i):
+        """
+        Return the logical qubit index for the `i`-th logical qubit of the block located at column `c` and row `r`.
+        `c`, `r`, and the returned index all start from 0.
+        `i` takes value from {1,2}.
+        """
+        assert 0 <= c and c < n_col
+        assert 0 <= r and r < n_row
+        assert i == 1 or i == 2
+        return c * n_row * 2 + r * 2 + i - 1
+    
+    def pidx(c, r, i):
+        """
+        Return the physical qubit index for the `i`-th physical qubit of the block located at column `c` and row `r`.
+        `c`, `r`, and the returned index all start from 0.
+        `i` takes value from {1,2,3,4}.
+        """
+        assert 0 <= c and c < n_col
+        assert 0 <= r and r < n_row
+        assert i == 1 or i == 2 or i == 3 or i == 4
+        return c * n_row * 4 + r * 4 + i - 1
+    
     # ----- build target Hamiltonian `Htar`, penalty Hamiltonian `Hpen`, encoding Hamiltonian `Henc1` & `Henc2`, encoder isometry `Uenc` -----
+    nb = n_row * n_col # number of blocks
     nl = 2 * nb # number of logical qubits
     n = 4 * nb # number of physical qubits
+
+    Htar = 0
+    for c in range(n_col):
+        for r in range(n_row):
+            i1, i2 = lidx(c, r, 1), lidx(c, r, 2)
+            Htar += X(i1) * X(i2) # horizontal inner-block XX at block (c,r)
+            
+            if r < n_row - 1: # vertical cross-block ZZ between block (c,r) and block (c,r+1)
+                u1, u2, d1, d2 = lidx(c, r, 1), lidx(c, r, 2), lidx(c, r + 1, 1), lidx(c, r + 1, 2)
+                Htar += Z(u1) * Z(d2) + Z(u2) * Z(d1)
     
-    Htar = index_sum(X(0) * X(1), size=nl) + index_sum(Z(0) * Z(1), size=nl)
+            if c < n_col - 1: # horizontal cross-block XX between block (c,r) and block (c+1,r)
+                l1, l2, r1, r2 = lidx(c, r, 1), lidx(c, r, 2), lidx(c + 1, r, 1), lidx(c + 1, r, 2)
+                if r % 2 == 0:
+                    Htar += X(l2) * X(r1)
+                else:
+                    Htar += X(l1) * X(r2)
     Htar.L = nl
-    
-    Hpen = sum([X(2*i) * X(2*i+1) + 3 * Z(2*i) * Z(2*i+1) for i in range(2 * nb)])
+
+    Hpen = 0
+    for c in range(n_col):
+        for r in range(n_row):
+            gx, gz = flavor_gx[r % 3], flavor_gz[r % 3]
+            i1, i2, i3, i4 = pidx(c, r, 1), pidx(c, r, 2), pidx(c, r, 3), pidx(c, r, 4)
+            Hpen += gx * X(i1) * X(i2) + gz * Z(i1) * Z(i2) + gx * X(i3) * X(i4) + gz * Z(i3) * Z(i4)
     Hpen.L = n
 
-    Henc1 = sum([Z(4*i+1)*Z(4*i+2) - X(4*i+1)*X(4*i+2) for i in range(nb)]) # inner-block logical ZZ & XX
-    Henc1 += sum([-3.5*Z(4*i+4)*Z(4*i+5) + 1.5*X(4*i)*X(4*i+1) for i in range(nb-1)]) # compensate for residual terms from cross-block gadget
+    Henc1 = 0
+    Henc2 = 0
+    for c in range(n_col):
+        for r in range(n_row):
+            i1, i2, i3, i4 = pidx(c, r, 1), pidx(c, r, 2), pidx(c, r, 3), pidx(c, r, 4)
+            Henc1 += - X(i2) * X(i3) # horizontal inner-block XX at block (c,r)
+    
+            if r < n_row - 1: # vertical cross-block ZZ between block (c,r) and block (c,r+1)
+                u1, u2, u3, u4 = pidx(c, r, 1), pidx(c, r, 2), pidx(c, r, 3), pidx(c, r, 4)
+                d1, d2, d3, d4 = pidx(c, r + 1, 1), pidx(c, r + 1, 2), pidx(c, r + 1, 3), pidx(c, r + 1, 4)
+                
+                gx, gz = flavor_gx[(r+1) % 3], flavor_gz[r % 3]
+                alpha = np.sqrt((gz ** 2 - gx ** 2) / gz)
+                Henc2 += alpha * (X(u3) * Z(d2) + X(u3) * Z(d4))
+                Henc1 += Z(u1) * Z(u2) # compensate for residual terms from cross-block gadget
+    
+                gx, gz = flavor_gx[r % 3], flavor_gz[(r+1) % 3]
+                alpha = np.sqrt((gz ** 2 - gx ** 2) / gz)
+                Henc2 += alpha * (X(d3) * Z(u2) + X(d3) * Z(u4))
+                Henc1 += Z(d1) * Z(d2) # compensate for residual terms from cross-block gadget
+    
+            if c < n_col - 1: # horizontal cross-block XX between block (c,r) and block (c+1,r)
+                l1, l2, l3, l4 = pidx(c, r, 1), pidx(c, r, 2), pidx(c, r, 3), pidx(c, r, 4)
+                r1, r2, r3, r4 = pidx(c + 1, r, 1), pidx(c + 1, r, 2), pidx(c + 1, r, 3), pidx(c + 1, r, 4)
+                
+                gx, gz = flavor_gx[r % 3], flavor_gz[r % 3]
+                alpha = np.sqrt((gz ** 2 - gx ** 2) / gx)
+                if r % 2 == 0:
+                    Henc2 += alpha * (Z(l2) * X(r1) + Z(l2) * X(r3))
+                    Henc1 += X(l1) * X(l2) # compensate for residual terms from cross-block gadget
+                else:
+                    Henc2 += alpha * (Z(r2) * X(l1) + Z(r2) * X(l3))
+                    Henc1 += X(r1) * X(r2) # compensate for residual terms from cross-block gadget
     Henc1.L = n
-    Henc2 = sum([np.sqrt(8/3) * (Z(4*i+1)*X(4*i+6) + Z(4*i+3)*X(4*i+6) + 3*Z(4*i+1)*X(4*i+4)) for i in range(nb-1)]) # cross-block logical ZZ & XX
     Henc2.L = n
 
     Uenc = get_encoder_isometry(nb)
     Penc = Uenc @ Uenc.conj().T
-
+    
     for lamb in lamb_list:
         for seed in seed_list:
             for t in t_list:
@@ -111,7 +190,7 @@ if __name__ == '__main__':
                 psi0_np = psi0.to_numpy()
                 PSI0_np = Uenc @ psi0_np
                 PSI0 = array2state(L=n, arr=PSI0_np) # UPPER case: encoded states
-                
+        
                 # evolve
                 psi = Htar.evolve(psi0, t=t)
                 PSI = Htot.evolve(PSI0, t=t, max_its=MAX_ITS)
@@ -128,6 +207,6 @@ if __name__ == '__main__':
                 postsel_innerprod = np.dot(postsel_PSI_np.conj(), Uenc_psi_np)
 
                 # output
-                f = open(f"output_1dXZ_{nb}blocks_noise={noise}_seed={seed}.txt", "a")
+                f = open(f"output_2dCompass_{n_row}x{2*n_col}_noise={noise}_seed={seed}.txt", "a")
                 f.write(f"#blocks = {nb}, noise = {noise}, lamb = {lamb}, t = {t}, seed = {seed}, innerprod = {innerprod}, leakage = {leakage}, postsel_innerprod = {postsel_innerprod}\n")
                 f.close()

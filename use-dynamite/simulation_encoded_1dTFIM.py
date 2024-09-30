@@ -130,6 +130,6 @@ if __name__ == '__main__':
                 postsel_innerprod = np.dot(postsel_PSI_np.conj(), Uenc_psi_np)
 
                 # output
-                f = open(f"output_1dTFIM_{nb}blocks_noise={noise}.txt", "a")
+                f = open(f"output_1dTFIM_{nb}blocks_noise={noise}_seed={seed}.txt", "a")
                 f.write(f"#blocks = {nb}, noise = {noise}, lamb = {lamb}, t = {t}, seed = {seed}, innerprod = {innerprod}, leakage = {leakage}, postsel_innerprod = {postsel_innerprod}\n")
                 f.close()
