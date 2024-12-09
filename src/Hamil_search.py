@@ -223,14 +223,18 @@ def getHamil(n, Xeff, Zeff):
     H = sum([t.value() for t in terms])
     return H
 
-def getSpace(n, H):
+def getSpace(n, H, target='zero'):
     eigenvalues, eigenvectors = LA.eigh(H)
-    index = np.absolute(eigenvalues)<1e-6
+    if target=='zero':
+        index = np.absolute(eigenvalues)<1e-6
+    elif target=='min':
+        minEigen = min(eigenvalues)
+        index = np.absolute(eigenvalues - minEigen)<1e-6
     eigenvectors = eigenvectors[:, index]
     return eigenvectors
 
 def testH(n, H):
-    eigenvectors = getSpace(n, H)
+    eigenvectors = getSpace(n, H, 'min')
     PList = []
     # print(f"space size: {eigenvectors.shape[1]}")
     if eigenvectors.shape[1]<4:
@@ -246,8 +250,8 @@ def testH(n, H):
     #     print(eigenvectors.shape[1])
     return result, eigenvectors.shape[1]
 
-def getProjector(n, H):
-    eigenvectors = getSpace(n, H)
+def getProjector(n, H, target='zero'):
+    eigenvectors = getSpace(n, H, target)
     PList = []
     # print(f"space size: {eigenvectors.shape[1]}")
     if eigenvectors.shape[1]<4:
@@ -299,10 +303,11 @@ def searchHpen(n, k, thres=0, path = 'result'):
         for Xeff in Xeff_can:
             if Xeff[0]<0:
                 continue
-            print(Xeff)
+            print('xeff', Xeff)
             for Zeff in Zeff_can:
                 if Zeff[0]<0:
                     continue
+                # print('zeff', Zeff)
                 res, size = testEff(n, Xeff, Zeff)
                 if res and size>=thres:
                     f.write((f"succeed: {Xeff}, {Zeff}, size: {size}, {XZeff2Str(n, Xeff, Zeff)}\n"))
