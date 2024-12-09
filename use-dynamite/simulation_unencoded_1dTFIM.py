@@ -9,23 +9,38 @@ X, Y, Z = sigmax, sigmay, sigmaz
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("--seed", type=int, required=True,
-                           help="random seed (used to sample the noise coefficients and the initial state)")
     argparser.add_argument("-n", type=int, required=True,
                            help="number of qubits")
+    argparser.add_argument("--noise", type=float, required=True,
+                           help="noise strength")
+    argparser.add_argument("-t", type=float, required=True,
+                           help="evolving time")
+    argparser.add_argument("--seed", type=int, required=True,
+                           help="random seed (used to sample the noise coefficients and the initial state)")
     args = argparser.parse_args()
 
     if args.seed >= 0:
         seed_list = [args.seed]
-    elif args.seed == -1:
+    elif args.seed == -50:
         seed_list = list(range(50))
+    elif args.seed == -20:
+        seed_list = list(range(20))
     else:
         print("invalid seed")
         exit(1)
 
+    if args.t > 0:
+        t_list = [args.t]
+    elif args.t == -10:
+        t_list = 0.1 * np.arange(1,101)
+    elif args.t == -1:
+        t_list = 0.02 * np.arange(1,51)
+    else:
+        print("invalid t")
+        exit(1)
+    
     n = args.n
-
-    t_list = 0.1 * np.arange(1,101)
+    noise = args.noise
 
     for t in t_list:
         for seed in seed_list:
@@ -36,9 +51,9 @@ if __name__ == '__main__':
 
             # add coherent error
             np.random.seed(seed)
-            epsx = np.random.uniform(-1,1,n)
-            epsy = np.random.uniform(-1,1,n)
-            epsz = np.random.uniform(-1,1,n)
+            epsx = noise * np.random.uniform(-1,1,n)
+            epsy = noise * np.random.uniform(-1,1,n)
+            epsz = noise * np.random.uniform(-1,1,n)
             V = sum([epsx[i] * X(i) + epsy[i] * Y(i) + epsz[i] * Z(i) for i in range(n)])
             V.L = n
 
@@ -53,9 +68,9 @@ if __name__ == '__main__':
             psi_noisy = H_noisy.evolve(psi0, t=t)
             psi_true_np = psi_true.to_numpy()
             psi_noisy_np = psi_noisy.to_numpy()
-            err = np.linalg.norm(psi_noisy_np - psi_true_np)
+            innerprod = np.dot(psi_noisy_np.conj(), psi_true_np)
 
             # output
-            f = open(f"sweep_time_unencoded_{n}qubits.txt", "a")
-            f.write(f"#qubits = {n}, t = {t}, seed = {seed}, error = {err}\n")
+            f = open(f"sweep_time_{n}qubits_noise={noise}.txt", "a")
+            f.write(f"#qubits = {n}, noise = {noise}, t = {t}, seed = {seed}, innerprod = {innerprod}\n")
             f.close()
