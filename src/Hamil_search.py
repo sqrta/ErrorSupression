@@ -6,6 +6,8 @@ from itertools import product
 import time
 import random
 import sys
+import itertools
+from functools import reduce
 
 PAULI_MATRICES = np.array((
     ((0, 1), (1, 0)),
@@ -145,23 +147,32 @@ def checkLinear(P1, P2):
     r1 = P1[i1] / P2[i1]
     return checkSame(P1, r1*P2)
 
+def allSubset2Size(s, startSize, endSize):
+    return reduce(lambda a, b: a+b, [findsubsets(s, i) for i in range(startSize, endSize+1)])
 
-def testProjector(P, n):
-    for i in range(n):
-        E = pauliStr2mat(n, f'X{i}')
+def findsubsets(s, n):
+    return list(itertools.combinations(s, n))
+
+def getErrorStr(n, distance):
+    result = []
+    indexSet = allSubset2Size(list(range(n)), 1, distance)
+    for i in range(1, distance+1):
+        paulis = list(itertools.product(['X', 'Y', 'Z'], repeat=i))
+        indexSet = findsubsets(list(range(n)), i)
+        for index in indexSet:
+            for p in paulis:
+                result.append('*'.join([f'{p[i]}{index[i]}' for i in range(len(p))]))
+    return result
+
+def testProjector(P, n, config):
+    distance = config['distance']
+    errorStr = getErrorStr(n, distance)
+    for es in errorStr:
+        E = pauliStr2mat(n, es)
         res = P @ E @ P
         if not checkLinear(res, P):
             return False
-    for i in range(n):
-        E = pauliStr2mat(n, f'Z{i}')
-        res = P @ E @ P
-        if not checkLinear(res, P):
-            return False
-    for i in range(n):
-        E = pauliStr2mat(n, f'Y{i}')
-        res = P @ E @ P
-        if not checkLinear(res, P):
-            return False
+        
     return True
 
 def getP(vecs):
@@ -223,7 +234,8 @@ def getHamil(n, Xeff, Zeff):
     H = sum([t.value() for t in terms])
     return H
 
-def getSpace(n, H, target='zero'):
+def getSpace(n, H, config):
+    target = config['target']
     eigenvalues, eigenvectors = LA.eigh(H)
     if target=='zero':
         index = np.absolute(eigenvalues)<1e-6
@@ -233,8 +245,8 @@ def getSpace(n, H, target='zero'):
     eigenvectors = eigenvectors[:, index]
     return eigenvectors
 
-def testH(n, H):
-    eigenvectors = getSpace(n, H, 'min')
+def testH(n, H, config):
+    eigenvectors = getSpace(n, H, config)
     PList = []
     # print(f"space size: {eigenvectors.shape[1]}")
     if eigenvectors.shape[1]<4:
@@ -245,12 +257,13 @@ def testH(n, H):
         PList.append(vec)
     # PList = [ket2Vec(n, ['1000', '0111']), ket2Vec(n, ['0100', '1011']), ket2Vec(n, ['0010', '1101']), ket2Vec(n, ['0001', '1110'])]
     P = getP(PList)
-    result = testProjector(P, n)
+    result = testProjector(P, n,config)
     # if result:
     #     print(eigenvectors.shape[1])
     return result, eigenvectors.shape[1]
 
-def getProjector(n, H, target='zero'):
+def getProjector(n, H, config):
+    target = config['target']
     eigenvectors = getSpace(n, H, target)
     PList = []
     # print(f"space size: {eigenvectors.shape[1]}")
@@ -264,9 +277,9 @@ def getProjector(n, H, target='zero'):
     P = getP(PList)
     return P
 
-def testLogicalOp(n, pauliStr, H, Pc):
+def testLogicalOp(n, pauliStr, H, Pc, config):
     op = pauliExpr2Mat(n, pauliStr)
-    P = getProjector(n, H)
+    P = getProjector(n, H,config)
     O = P @ op @ P
     return commuteOrNot(O, Pc)
 
@@ -284,16 +297,18 @@ def MEqual(M1, M2):
         return True
     return False
 
-def testEff(n, Xeff, Zeff):
+def testEff(n, Xeff, Zeff, config):
     terms = [PauliTerm(n, f'X{i}*X{(i+1)%n}', Xeff[i]) for i in range(n)] 
     terms += [PauliTerm(n, f'Z{i}*Z{(i+1)%n}', Zeff[i]) for i in range(n)]
     # print(terms)
     
     H = sum([t.value() for t in terms])
-    return testH(n, H)
+    return testH(n, H, config)
 
 
-def searchHpen(n, k, thres=0, path = 'result'):
+def searchHpen(n,config, path = 'result'):
+    k = config['depth']
+    thres = config['thres']
     with open(path, 'w') as f:
     # if True:
         Xeff_can = list(product(range(-k, k+1), repeat=n))
@@ -307,8 +322,9 @@ def searchHpen(n, k, thres=0, path = 'result'):
             for Zeff in Zeff_can:
                 if Zeff[0]<0:
                     continue
-                # print('zeff', Zeff)
-                res, size = testEff(n, Xeff, Zeff)
+                
+                res, size = testEff(n, Xeff, Zeff, config)
+                # print('zeff', Zeff, res, size)
                 if res and size>=thres:
                     f.write((f"succeed: {Xeff}, {Zeff}, size: {size}, {XZeff2Str(n, Xeff, Zeff)}\n"))
                     # print((f"succeed: {Xeff}, {Zeff}, size: {size}"))
@@ -318,16 +334,16 @@ def searchHpen(n, k, thres=0, path = 'result'):
 
 if __name__ =='__main__':
     n = 6
-
-    
     depth = 3
     thres = 0
+    
     if len(sys.argv)>1:
         n=int(sys.argv[1])
     if len(sys.argv)>2:
         depth = int(sys.argv[2])
     if len(sys.argv)>3:
         thres = int(sys.argv[3])
+    config = {'target': 'min', 'distance': 2, 'depth':depth, 'thres':thres}
     # c1 = ket2Vec(n, ['1000', '0111']) 
     # P = c1 @ c1.conj().T
     # print(P)
@@ -350,6 +366,6 @@ if __name__ =='__main__':
     # exit(0)
     # res = testEff(n, Xeff, Zeff)
     # print(res)
-    searchHpen(n, depth, thres, f'result{n}_{depth}_{thres}')
+    searchHpen(n, config, f"result{n}_{depth}_{thres}_{config['distance']}_{config['target']}")
     end = time.time()
     print(f'use {end-start}s')
