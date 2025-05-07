@@ -6,3 +6,5 @@ src/result*
 src/__pycache__/
 
 *.npy
+
+.env/
