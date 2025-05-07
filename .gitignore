@@ -2,4 +2,7 @@ src/output*
 src/__pycache__
 *.pdf
 .DS_Store
+src/result*
+src/__pycache__/
+
 *.npy
