@@ -21,6 +21,9 @@ def EncodeTar(Htar, blockNum, lamb):
     return res
 
 def getU(n, blockNum):
+    """
+    n: number of physical qubits for each block (should be 4)
+    """
     v1 = ket2Vec(n, ['0001', '-1110'])
     v2 = ket2Vec(n, ['-0010', '1101'])
     v3 = ket2Vec(n, ['0100', '-1011'])
@@ -72,17 +75,33 @@ def exp_minus_iHt_mult_B(H, t, B):
     return A
 
 def term2Mat(size, term):
+    """
+    `size` means number of qubits.
+
+    e.g. `term2Mat(4, (2, 'X1*X2'))` returns 2X1X2
+    """
     return term[0] * pauliExpr2Mat(size, term[1])
     
 def blocks2Mat(size, block):
+    """
+    `size` means number of qubits.
+
+    e.g. `blocks2Mat(4, [(1, 'Z0*Z1'), (2, 'X1*X2'), (1, 'Z2*Z3')])` returns Z0Z1+2X1X2+Z2Z3
+    """
     return sum([term2Mat(size, b) for b in block])
 
 def getHpen(size, blockNum):
+    """
+    `size` means number of physical qubits.
+
+    e.g. `getHpen(8,2)` returns X0X1+3Z0Z1+X2X3+3Z2Z3+X4X5+3Z4Z5+X6X7+3Z6Z7
+    """
     Hpen_block = []
     for i in range(blockNum):
         Hpen_block += [(1, f'X{4*i}*X{4*i+1}'), (3, f'Z{4*i}*Z{4*i+1}'), (1, f'X{4*i+2}*X{4*i+3}'), (3, f'Z{4*i+2}*Z{4*i+3}')]
     Hpen = blocks2Mat(size, Hpen_block)
     return Hpen
+
 def getError(lambdaPen, blockNum, iters=1):
     n = 4
     size = n*blockNum
