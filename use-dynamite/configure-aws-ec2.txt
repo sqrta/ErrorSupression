@@ -2,11 +2,11 @@ EC2 instance: Deep Learning OSS Nvidia Driver AMI GPU TensorFlow 2.16 (Amazon Li
 
 --- Connect to server ---
 On local machine:
-$ ssh -i ~/.aws/ec2-key-pair/hamiltonian-code.pem ec2-user@ec2-34-230-82-196.compute-1.amazonaws.com
+$ ssh -i ~/.aws/ec2-key-pair/hamiltonian-code.pem ec2-user@ec2-3-84-111-168.compute-1.amazonaws.com
 
 --- Connect to server and set up SSH Tunneling ---
 On local machine:
-$ ssh -i ~/.aws/ec2-key-pair/hamiltonian-code.pem -L 8887:localhost:8887 ec2-user@ec2-34-230-82-196.compute-1.amazonaws.com
+$ ssh -i ~/.aws/ec2-key-pair/hamiltonian-code.pem -L 8887:localhost:8887 ec2-user@ec2-3-84-111-168.compute-1.amazonaws.com
 
 --- Check GPU status ---
 $ nvidia-smi
@@ -36,9 +36,17 @@ $ docker pull gdmeyer/dynamite:latest-cuda
 
 --- Run Jupyter Notebook ---
 $ docker run --rm -p 8887:8887 -v $PWD:/home/dnm gdmeyer/dynamite:latest-cuda-jupyter
+$ docker run --rm -v $PWD:/home/dnm gdmeyer/dynamite:latest-cuda-jupyter
+$ docker run --rm -v $PWD:/home/dnm --runtime=nvidia --gpus all gdmeyer/dynamite:latest-cuda-jupyter
 
 --- Run script ---
 without GPU:
-$ docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation.py --seed 0 -nb 4 --lamb 8 -t -1 &
+$ for ((i = 0 ; i < 10 ; i++ )); do docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation_encoded_1dTFIM_with2localnoise.py --nb 3 --noise1loc 0.1 --noise2loc 0.001 --lamb 128 --time 5 --nt 500 --seed $i & echo "$i" ; done
+$ for ((i = 0 ; i < 10 ; i++ )); do docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation_unencoded_1dTFIM_with2localnoise.py -n 6 --noise1loc 0.1 --noise2loc 0.0008 --time 5 --nt 500 --seed $i & echo "$i" ; done
+$ for ((i = 0 ; i < 10 ; i++ )); do docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation_encoded_2dTFIM.py --nr 3 --nc 1 --noise 0.1 --lamb 2048 --start 0 --time 1 --nt 100 --seed $i & echo "$i" ; done
+$ for ((i = 0 ; i < 10 ; i++ )); do docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation_unencoded_2dTFIM.py --nr 3 --nc 2 --noise 0.1 --time 10 --nt 1000 --seed $i & echo "$i" ; done
+$ docker run --rm -it -v $PWD:/home/dnm gdmeyer/dynamite:latest nohup python simulation_encoded_2dTFIM.py --nr 2 --nc 2 --noise 0.1 --lamb -1 --time 1 --nt 1 --seed 0 &
 with GPU:
-$ docker run --rm -it -v $PWD:/home/dnm --runtime=nvidia --gpus all gdmeyer/dynamite:latest-cuda nohup python simulation.py --seed 42 -nb 3 --lamb 32 -t 1 &
+$ docker run --rm -it -v $PWD:/home/dnm --runtime=nvidia --gpus all gdmeyer/dynamite:latest-cuda nohup python simulation_encoded_1dTFIM_with2localnoise.py --nb 3 --noise1loc 0.1 --noise2loc 0 --lamb 64 --time 5 --nt 500 --seed 0 &
+$ docker run --rm -it -v $PWD:/home/dnm --runtime=nvidia --gpus all gdmeyer/dynamite:latest-cuda nohup python simulation_encoded_2dTFIM.py --nr 3 --nc 1 --noise 0.1 --lamb 1024 --time 10 --nt 1000 --seed 0 &
+$ docker run --rm -it -v $PWD:/home/dnm --runtime=nvidia --gpus all gdmeyer/dynamite:latest-cuda nohup python simulation_unencoded_1dTFIM_with2localnoise.py -n 6 --noise1loc 0.1 --noise2loc 0 --time 5 --nt 500 --seed 0 &
