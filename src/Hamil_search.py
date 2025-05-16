@@ -9,8 +9,12 @@ import sys
 import itertools
 from functools import reduce
 
+
 PAULI_MATRICES = np.array((((0, 1), (1, 0)), ((0, -1j), (1j, 0)), ((1, 0), (0, -1))))
-(X, Y, Z) = PAULI_MATRICES
+X = np.array((((0, 1), (1, 0))))
+Y = np.array(((0, -1j), (1j, 0)))
+Z = np.array(((1, 0), (0, -1)))
+
 I = np.identity(2)
 
 
@@ -20,7 +24,7 @@ def tensor(op_list):
 
 def pauli2Mat(num_qubits, indexes, paulis):
     """
-    e.g. `pauli2Mat(4, [0,2], [X,Z])`
+    pauli str to numpy matrices
     """
     op_list = [np.eye(2)] * num_qubits
     for index, pauli in zip(indexes, paulis):
@@ -44,11 +48,6 @@ def getIsingHtarBlock(blockNum):
 
 
 def pauliStr2mat(num_qubits, pstrings):
-    """
-    e.g. `pauliStr2mat(4, "X0*Z2")`
-
-    e.g. `pauliStr2mat(4, "99*X0*Z2")`
-    """
     indexes = []
     paulis = []
     pmap = {"I": I, "X": X, "Y": Y, "Z": Z}
@@ -63,12 +62,24 @@ def pauliStr2mat(num_qubits, pstrings):
     return eff * pauli2Mat(num_qubits, indexes, paulis)
 
 
-def parsePauliTerm(e):
-    """
-    e.g. `parsePauliTerm("X0*X1")` returns `(1, "X0*X1")`
+def splitPaulis(e):
+    pstr = e
+    pauli = set(["I", "X", "Y", "Z"])
 
-    e.g. `parsePauliTerm("(-0.5)*X0*10*X1")` returns `(-5.0, "X0*X1")`
-    """
+    effStr = ["1"]
+    pStr = []
+    for i in e.split("*"):
+        if i[0] not in pauli:
+            effStr.append(i)
+        else:
+            pStr.append((i[0], int(i[1:])))
+    effstr = "*".join(effStr)
+
+    eff = eval(effstr)
+    return eff, pStr
+
+
+def parsePauliTerm(e):
     pstr = e
     eff = 1
     pauli = set(["I", "X", "Y", "Z"])
@@ -89,9 +100,8 @@ def parsePauliTerm(e):
 
 def pauliExpr2Mat(n, expr):
     """
-    n: number of qubits.
-
-    e.g. `pauliExpr2Mat(4, "X0*X1+(-1)*Z0*Z1")`
+    n: size
+    pstring: e.g. X1*X2 + Z1*Z2
     """
     exp = expr.split("+")
     terms = []
@@ -117,11 +127,6 @@ def ket2Str(n, kets):
 
 class PauliTerm:
     def __init__(self, n, term, eff=1) -> None:
-        """
-        e.g. `PauliTerm(4, "X0*Z2")`
-
-        e.g. `PauliTerm(4, "X0*Z2", eff=99)`
-        """
         self.eff = eff
         self.term = term
         self.n = n
@@ -152,7 +157,7 @@ def ket2Vec(n, kets):
             res = ket
         index = int(res, base=2)
         vec[index, 0] = sign
-    return vec
+    return vec / (len(kets)) ** 0.5
 
 
 def checkSame(P1, P2, thres=1e-4):
@@ -264,9 +269,6 @@ def printVecs(n, Xeff, Zeff):
 
 
 def getHamil(n, Xeff, Zeff):
-    """
-    e.g. `getHamil(4, (1,0,1,0), (0,1,0,1))` returns X0X1+Z1Z2+X2X3+Z3Z0
-    """
     terms = [PauliTerm(n, f"X{i}*X{(i+1)%n}", Xeff[i]) for i in range(n)]
     terms += [PauliTerm(n, f"Z{i}*Z{(i+1)%n}", Zeff[i]) for i in range(n)]
     # print(terms)
@@ -305,8 +307,8 @@ def testH(n, H, config):
 
 
 def getProjector(n, H, config):
-    target = config["target"]
-    eigenvectors = getSpace(n, H, target)
+
+    eigenvectors = getSpace(n, H, config)
     PList = []
     # print(f"space size: {eigenvectors.shape[1]}")
     if eigenvectors.shape[1] < 4:
