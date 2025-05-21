@@ -28,7 +28,7 @@ def getU(n, blockNum):
     v2 = ket2Vec(n, ['-0010', '1101'])
     v3 = ket2Vec(n, ['0100', '-1011'])
     v4 = ket2Vec(n, ['-0111', '1000'])
-    U0 = np.column_stack((v1,v2,v3,v4)) / 2**0.5
+    U0 = np.column_stack((v1,v2,v3,v4))
     U = U0
     for i in range(blockNum-1):
         U = np.kron(U, U0)
