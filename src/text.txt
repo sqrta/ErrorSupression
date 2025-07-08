@@ -1,11 +1,5 @@
-Quantum computing has gained significant attention due to its potential to provide asymp-
-totically faster solutions to certain computing problems compared to the best-known classical
-algorithms. A scalable, functioning quantum computer is believed to hold promise for solv-
-ing complex computational challenges in fields such as scientific discovery, materials research,
-chemistry, and drug design. Quantum programming is a key step in implementing these quantum computing applications on the near-term quantum hardware.
+Y0*X2+Z2*Y4 0.33333333333333337 * X(0) @ X(2)
++ 0.6666666666666666 * Y(0) @ Y(2)
 
-However, developing efficient quantum programs remains challenging due to the unique constraints of quantum systems. Quantum computing introduces a fundamentally different programming paradigm from classical computing, requiring programmers to be familiar with unintuitive quantum knowledge. Writing efficient quantum programs is complex since it requires programmers to deeply understand quantum mechanics and carefully optimize various hardware-dependent factors, including gate fidelity, decoherence time, and qubit connectivity constraints. Unlike classical software development, where high-level abstractions and optimized compilers ease the programming burden, most existing quantum programming languages are still using the low-level circuit abstraction, making it difficult to write efficient and error-free programs manually. Furthermore, quantum hardware is noisy and limited in resources, making it essential to find program implementations that minimize errors, reduce execution time, and optimize qubit utilization.
-
-Program synthesis is an approach that automatically generates programs satisfying given specifications. By leveraging synthesis techniques, quantum developers can focus on high-level algorithm design rather than tedious circuit optimization, significantly improving quantum software developers' productivity. Moreover, program synthesis can lower the entry barrier for newcomers, allowing those who do not have quantum expertise to develop and experiment with quantum applications. Additionally, program synthesis can explore alternative implementations that might be overlooked by human programmers, potentially leading to more resource-efficient solutions that require fewer gates, fewer qubits or other resources that are limited in the current quantum hardware. This can bridge the gap between theoretical algorithms and their efficient realization on real-world quantum hardware.
-
-Given that program synthesis is highly beneficial for quantum programming, several quantum unique challenges arise when building the three core components (specification, synthesizer and verifier) to directly apply traditional program synthesis techniques to this domain. Without my works, there is no solution for solving the challenges arsing from synthesizing high-level quantum programs with recursion or loop.
+Z0*Y2+X1*Y5 -0.33333333333333315 * Z(1)
++ 0.33333333333333315 * X(0) @ X(2)
