@@ -3,6 +3,7 @@ from Hamil_search1 import *
 from simulation import blocks2Mat
 import numpy as np
 import scipy.sparse as sp
+import traceback
 
 # %%
 def zero_eigen_projector(H, tol=1e-10):
@@ -243,15 +244,18 @@ for i in range(1, 6):
 
 # %%
 with open('result', 'w') as f:
-    for i in range(303,304):
+    for i in range(len(all_terms)):
 
         Henc_terms = all_terms[i]
 
         Henc = blocks2Mat(12, Henc_terms)
         # print(f"Henc is hermitian? {np.allclose(Henc, Henc.conj().T)}")
         # print(f"Uenc is hermitian? {np.allclose(Uenc, Uenc.conj().T)}")
-        print(i)
-        res = test_leakage_and_get_logical_interaction(HpenInverse2, P, Penc, Uenc, Henc)
+        print(i, Henc_terms)
+        try:
+            res = test_leakage_and_get_logical_interaction(HpenInverse2, P, Penc, Uenc, Henc)
+        except Exception as e:
+            res = str(traceback.format_exc())
         f.write(f"{i}: {Henc_terms}\n {res}\n\n")
 
 # %%
