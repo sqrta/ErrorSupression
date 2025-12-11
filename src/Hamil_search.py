@@ -278,7 +278,7 @@ def getHamil(n, Xeff, Zeff):
 
 def getSpace(n, H, config):
     target = config["target"]
-    eigenvalues, eigenvectors = LA.eigh(H)
+    eigenvalues, eigenvectors = np.linalg.eig(H)
     if target == "min":
         minEigen = min(eigenvalues)
         index = np.absolute(eigenvalues - minEigen) < 1e-6

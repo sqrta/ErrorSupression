@@ -243,7 +243,7 @@ for i in range(1, 6):
     print(all_terms[-i])
 
 # %%
-with open('result', 'w') as f:
+with open('result_3.6w_4w', 'w') as f:
     for i in range(len(all_terms)):
 
         Henc_terms = all_terms[i]
